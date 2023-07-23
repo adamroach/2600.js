@@ -1,0 +1,12 @@
+{
+  "name": "dasm",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "Disassembler for Atari 2600 cartridge images",
+  "main": "dasm.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Adam Roach",
+  "license": "MIT"
+}
