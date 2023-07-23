@@ -1,0 +1,12 @@
+{
+  "name": "run",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "Diagnostic runner for Atari 2600 cartridge images",
+  "main": "run.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Adam Roach",
+  "license": "MIT"
+}

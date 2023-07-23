@@ -8,7 +8,7 @@ import {Rom} from "../modules/rom.mjs"
 import {Ram} from "../modules/ram.mjs"
 
 const cpu = new Cpu6502();
-const rom = new Rom(fs.readFileSync("../roms/colrtest.bit"));
+const rom = new Rom(fs.readFileSync(process.argv[2]));
 
 cpu.attach(rom, 0x1000, 0x1000, 0x0fff);
 cpu.attach(new Ram(0x80), 0x1280, 0x0080, 0x007f);

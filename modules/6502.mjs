@@ -105,13 +105,13 @@ export class Cpu6502 {
   set C(x) { this.setFlag(Flag.C, !!x); }
 
   push(x) {
-    write(this.SP | 0x100, x);
+    this.write(this.SP | 0x100, x);
     this.SP = unsigned8(this.SP - 1);
   }
 
   pop() {
     this.SP = unsigned8(this.SP + 1);
-    return read(this.SP | 0x100);
+    return this.read(this.SP | 0x100);
   }
 
   carry() {
@@ -136,11 +136,19 @@ export class Cpu6502 {
       return;
     }
     let arg, temp, AH, AL;
-    let op = Opcode[this.read(this.PC)];
+    let bytecode = [this.read(this.PC)];
+    let op = Opcode[bytecode[0]];
+    if (op.length > 1) {
+      bytecode.push(this.read(this.PC+1));
+    }
+    if (op.length > 2) {
+      bytecode.push(this.read(this.PC+2));
+    }
+
     let argumentAddress = 0;
-    switch (op.Mode) {
+    switch (op.mode) {
       case Mode.ABS:     /* Absolute */
-        argumentAddress = this.read2(this.PC+1)
+        argumentAddress = bytecode[1] | (bytecode[2] << 8);
         break;
       case Mode.ACC:     /* Accumulator */
         // Accumulator is the target, which is special.
@@ -149,15 +157,17 @@ export class Cpu6502 {
         // four opcodes.
         break;
       case Mode.AX:      /* Absolute, X indexed */
-        argumentAddress = this.read2(this.PC+1) + this.X;
-        if ((argumentAddress & 0xff) < this.read(PC+1)
+        argumentAddress = bytecode[1] | (bytecode[2] << 8);
+        argumentAddress += this.X;
+        if (((argumentAddress & 0xff) < bytecode[1])
           && (op.attrs & Attrs.Read)) {
           this.cyclesToWait++;
         }
         break;
       case Mode.AY:      /* Absolute, Y indexed */
-        argumentAddress = this.read2(this.PC+1) + this.Y;
-        if ((argumentAddress & 0xff) < this.read(PC+1)
+        argumentAddress = bytecode[1] | (bytecode[2] << 8);
+        argumentAddress += this.Y;
+        if (((argumentAddress & 0xff) < bytecode[1])
           && (op.attrs & Attrs.Read)) {
           this.cyclesToWait++;
         }
@@ -168,13 +178,14 @@ export class Cpu6502 {
       case Mode.IMPL:    /* Implied */
         break;
       case Mode.INDR:    /* Absolute Indirect */
-        argumentAddress = this.read2(this.read2(this.PC+1));
+        argumentAddress = bytecode[1] | (bytecode[2] << 8);
+        argumentAddress = this.read2(argumentAddress);
         break;
-      case Mode.IX:      /* Zero Page X indexed Indirect */
-        argumentAddress = this.read2((this.PC+1 + this.X) & 0xff);
+      case Mode.IX:      /* (zp,X) Zero Page X indexed Indirect */
+        argumentAddress = this.read2(bytecode[1] + this.X);
         break;
-      case Mode.IY:      /* Zero Page Indirect, Y indexed */
-        argumentAddress = this.read2(this.PC+1);
+      case Mode.IY:      /* (zp),Y Zero Page Indirect, Y indexed */
+        argumentAddress = this.read(bytecode[1]);
         let temp = argumentAddress;
         argumentAddress += this.Y;
         if (((argumentAddress & 0xff) < (temp & 0xff))
@@ -183,13 +194,13 @@ export class Cpu6502 {
         }
         break;
       case Mode.ZABS:    /* Zero Page Absolute */
-        argumentAddress = this.read(this.PC+1)
+        argumentAddress = bytecode[1];
         break;
       case Mode.ZAX:     /* Zero Page Absolute, X indexed */
-        argumentAddress = this.read((this.PC+1+this.X) & 0xff)
+        argumentAddress = (bytecode[1] + this.X) & 0xff;
         break;
       case Mode.ZAY:     /* Zero Page Absolute, Y indexed */
-        argumentAddress = this.read((this.PC+1+this.Y) & 0xff)
+        argumentAddress = (bytecode[1] + this.Y) & 0xff;
         break;
     }
     argumentAddress &= 0xFFFF;
@@ -249,9 +260,10 @@ export class Cpu6502 {
       break;
 
       case Instruction.BIT: /* NZV -- special case Instruction.*/
-        this.Z= ~(this.read(argumentAddress)&this.A);
-        this.N=(this.read(argumentAddress)&128);
-        this.V=(this.read(argumentAddress)&64);
+        arc = this.read(argumentAddress);
+        this.Z= ~(arg&this.A);
+        this.N=(arg&128);
+        this.V=(arg&64);
       break;
 
       case Instruction.BMI:
@@ -268,9 +280,10 @@ export class Cpu6502 {
 
       case Instruction.BRK: /* B */
         this.PC++;
-        this.interrupt(0xFFFE);
-        this.PC--;
         this.B = true;
+        this.interrupt(0xFFFE);
+        this.B = false;
+        this.PC--;
       break;
 
       case Instruction.BVC:
@@ -594,7 +607,7 @@ export class Cpu6502 {
         case Mode.ABS:     /* Absolute */
         case Mode.ZABS:    /* Zero Page Absolute */
           if (op.attrs & Attr.REL) {
-            result += " $" + (addr + this.read(addr+1)+2)
+            result += " $" + (addr + signed8(this.read(addr+1)+2))
               .toString(16).padStart(2, "0");
           } else {
             result += " $" + arg;
@@ -619,7 +632,7 @@ export class Cpu6502 {
           result += " ($" + arg + ")";
           break;
         case Mode.IX:      /* Zero Page X indexed Indirect */
-          result += " ($" + arg + "X)";
+          result += " ($" + arg + ",X)";
           break;
         case Mode.IY:      /* Zero Page Indirect, Y indexed */
           result += " ($" + arg + "),Y";
