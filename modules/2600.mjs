@@ -1,8 +1,8 @@
-import {Cpu6502} from "6502.mjs"
-import {Rom} from "rom.mjs"
-import {Ram} from "ram.mjs"
-import {Riot} from "riot.mjs"
-import {Tia} from "tia.mjs"
+import {Cpu6502} from "./6502.mjs"
+import {Rom} from "./rom.mjs"
+import {Ram} from "./ram.mjs"
+import {Riot} from "./riot.mjs"
+import {Tia} from "./tia.mjs"
 
 export class Vcs {
   constructor(cartridge, screen) {
@@ -14,10 +14,10 @@ export class Vcs {
     this.ram = new Ram(128);
     this.riot = new Riot();
     this.tia = new Tia(screen);
-    cpu.attach(Rom, 0x1000, 0x1000, 0x0fff);
-    cpu.attach(Ram, 0x1280, 0x0080, 0x007f);
-    cpu.attach(Riot, 0x1280, 0x0280, 0x007f);
-    cpu.attach(Tia, 0x1080, 0x0000, 0x003f);
+    this.cpu.attach(this.rom, 0x1000, 0x1000, 0x0fff);
+    this.cpu.attach(this.ram, 0x1280, 0x0080, 0x007f);
+    this.cpu.attach(this.riot, 0x1280, 0x0280, 0x007f);
+    this.cpu.attach(this.tia, 0x1080, 0x0000, 0x003f);
   }
 
   start() {
