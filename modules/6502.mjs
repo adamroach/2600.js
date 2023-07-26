@@ -118,12 +118,12 @@ export class Cpu6502 {
     return this.P & 1;
   }
 
-  branch(cond) {
+  branch(cond, distance) {
     if (!cond) {
       return;
     }
     let temp = this.PC;
-    this.PC += signed8(this.read(this.PC+1));
+    this.PC += signed8(distance);
     this.cyclesToWait++;
     if ((temp & 0xff00) != (this.PC & 0xff00)) {
       this.cyclesToWait++;
@@ -148,7 +148,9 @@ export class Cpu6502 {
     let argumentAddress = 0;
     switch (op.mode) {
       case Mode.ABS:     /* Absolute */
-        argumentAddress = bytecode[1] | (bytecode[2] << 8);
+        if (!(op.attrs & Attr.REL)) {
+          argumentAddress = bytecode[1] | (bytecode[2] << 8);
+        }
         break;
       case Mode.ACC:     /* Accumulator */
         // Accumulator is the target, which is special.
@@ -182,10 +184,10 @@ export class Cpu6502 {
         argumentAddress = this.read2(argumentAddress);
         break;
       case Mode.IX:      /* (zp,X) Zero Page X indexed Indirect */
-        argumentAddress = this.read2(bytecode[1] + this.X);
+        argumentAddress = this.read2((bytecode[1] + this.X) & 0xff);
         break;
       case Mode.IY:      /* (zp),Y Zero Page Indirect, Y indexed */
-        argumentAddress = this.read(bytecode[1]);
+        argumentAddress = this.read2(bytecode[1]);
         let temp = argumentAddress;
         argumentAddress += this.Y;
         if (((argumentAddress & 0xff) < (temp & 0xff))
@@ -248,15 +250,15 @@ export class Cpu6502 {
       break;
 
       case Instruction.BCC:
-        this.branch(!this.C);
+        this.branch(!this.C, bytecode[1]);
       break;
 
       case Instruction.BCS:
-        this.branch(this.C);
+        this.branch(this.C, bytecode[1]);
       break;
 
       case Instruction.BEQ:
-        this.branch(this.Z);
+        this.branch(this.Z, bytecode[1]);
       break;
 
       case Instruction.BIT: /* NZV -- special case Instruction.*/
@@ -267,15 +269,15 @@ export class Cpu6502 {
       break;
 
       case Instruction.BMI:
-        this.branch(this.N);
+        this.branch(this.N, bytecode[1]);
       break;
 
       case Instruction.BNE:
-        this.branch(this.Z);
+        this.branch(this.Z, bytecode[1]);
       break;
 
       case Instruction.BPL:
-        this.branch(!this.N);
+        this.branch(!this.N, bytecode[1]);
       break;
 
       case Instruction.BRK: /* B */
@@ -287,11 +289,11 @@ export class Cpu6502 {
       break;
 
       case Instruction.BVC:
-        this.branch(!this.V);
+        this.branch(!this.V, bytecode[1]);
       break;
 
       case Instruction.BVS:
-        this.branch(this.V);
+        this.branch(this.V, bytecode[1]);
       break;
 
       case Instruction.CLC: /* C */
@@ -489,7 +491,7 @@ export class Cpu6502 {
           this.setpNZ(temp);
           this.A = ((AH << 4) | (AL & 0x0F));
         } else { /* binary calculation */
-          temp = this.A - this.read(argumentAddress) - (C?0:1);
+          temp = this.A - this.read(argumentAddress) - (this.C?0:1);
           this.V = (!(temp & 0x80) && (this.A & 0x80));
           this.A = temp & 0xFF;
           this.C = !((temp & 0xFF00) >>> 8);

@@ -18,18 +18,31 @@ export class Vcs {
     this.cpu.attach(this.ram, 0x1280, 0x0080, 0x007f);
     this.cpu.attach(this.riot, 0x1280, 0x0280, 0x007f);
     this.cpu.attach(this.tia, 0x1080, 0x0000, 0x003f);
+
+    this.frameCount = 0;
   }
 
   start() {
-    setInterval(this.tick.bind(this), this.tickDuration);
+    // setInterval(this.tick.bind(this), this.tickDuration);
+    // setInterval(this.tick.bind(this), 1);
+    setInterval(this.frame.bind(this), 1000/60);
+  }
+
+  frame() {
+    let i = 0;
+    while(!this.tick()) {i++}
   }
 
   tick() {
-    this.tia.tick();
     if (!this.divider) {
       this.riot.tick();
       this.cpu.tick();
     }
     this.divider = (this.divider + 1) % 3;
+    return this.tia.tick();
+  }
+
+  cart() {
+    return(this.cpu.disassemble(0x1000, 0x1000 + this.rom.length));
   }
 }

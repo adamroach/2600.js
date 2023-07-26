@@ -175,7 +175,7 @@ export class Tia {
     let start = x;
     let end = x + width;
 
-    if (this.startClock > end || this.endClock < start) return;
+    if (this.startClock > end || this.endClock < start) return line;
     if (this.startClock > start) start = this.startClock;
     if (this.endClock < end) end = this.endClock;
     for (let i = start; i < end; i++) {
@@ -199,7 +199,7 @@ export class Tia {
 
     let start = x;
     let end = x + width;
-    if (this.startClock > end || this.endClock < start) return;
+    if (this.startClock > end || this.endClock < start) return line;
     if (this.startClock > start) start = this.startClock;
     if (this.endClock < end) end = this.endClock;
 
@@ -316,6 +316,7 @@ export class Tia {
   }
 
   tick() {
+    let reset = false;
     this.clock++;
     if (this.clock == cyclesPerLine) {
       this.draw();
@@ -327,7 +328,9 @@ export class Tia {
     }
     if (this.line > linesPerFrame) {
       this.line = 0;
+      reset = true;
     }
+    return(reset);
   }
 
   get VSYNC() { return this.writeRegisters[VSYNC]; }
